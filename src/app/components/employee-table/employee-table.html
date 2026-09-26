@@ -1,0 +1,36 @@
+<section class="employee-table" aria-label="Listado de empleados">
+  <div class="table-header">
+    <h2>Listado</h2>
+    <span>{{ employeeList.length }} registros</span>
+  </div>
+
+  @if (employeeList.length > 0) {
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Cargo</th>
+          <th>Departamento</th>
+          <th>Sueldo</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (employee of employeeList; track employee.id) {
+          <tr>
+            <td>{{ employee.nombre }}</td>
+            <td>{{ employee.cargo }}</td>
+            <td>{{ employee.departamento }}</td>
+            <td>{{ employee.sueldo | currency: 'USD' : 'symbol' : '1.0-0' }}</td>
+            <td class="actions">
+              <button type="button" class="edit-btn" (click)="requestEdit(employee)">Editar</button>
+              <button type="button" class="delete-btn" (click)="requestDelete(employee.id)">Eliminar</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  } @else {
+    <p class="empty-state">Aun no hay empleados registrados.</p>
+  }
+</section>

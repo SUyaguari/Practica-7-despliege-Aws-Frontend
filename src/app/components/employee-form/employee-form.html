@@ -1,0 +1,33 @@
+<form class="employee-form" [formGroup]="employeeForm" (ngSubmit)="submitForm()">
+  <h2>{{ isEditing ? 'Editar empleado' : 'Nuevo empleado' }}</h2>
+
+  <label>
+    Nombre
+    <input type="text" formControlName="nombre" autocomplete="name" />
+  </label>
+
+  <label>
+    Cargo
+    <input type="text" formControlName="cargo" />
+  </label>
+
+  <label>
+    Departamento
+    <input type="text" formControlName="departamento" />
+  </label>
+
+  <label>
+    Sueldo
+    <input type="number" formControlName="sueldo" min="1" />
+  </label>
+
+  <div class="form-actions">
+    <button type="submit" [disabled]="employeeForm.invalid || loading">
+      {{ isEditing ? 'Actualizar' : 'Guardar' }}
+    </button>
+
+    @if (isEditing) {
+      <button type="button" class="btn-secondary" (click)="cancel()">Cancelar</button>
+    }
+  </div>
+</form>

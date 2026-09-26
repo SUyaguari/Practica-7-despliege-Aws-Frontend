@@ -1,0 +1,32 @@
+<main class="employee-page">
+  <section class="workspace-header">
+    <div>
+      <p class="eyebrow">Gestion de personal</p>
+      <h1>Empleados</h1>
+    </div>
+
+    @if (loading$ | async) {
+      <span class="status-pill">Cargando</span>
+    }
+  </section>
+
+  @if (error$ | async; as error) {
+    <p class="error-message">{{ error }}</p>
+  }
+
+  <section class="employee-layout">
+    <app-employee-form
+      [employee]="editingEmployee"
+      [loading]="loading$ | async"
+      (createEmployee)="createEmployee($event)"
+      (updateEmployee)="updateEmployee($event)"
+      (cancelEdit)="cancelEdit()"
+    />
+
+    <app-employee-table
+      [employees]="employees$ | async"
+      (editEmployee)="startEdit($event)"
+      (deleteEmployee)="deleteEmployee($event)"
+    />
+  </section>
+</main>
