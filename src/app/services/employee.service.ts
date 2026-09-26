@@ -5,12 +5,11 @@ import { environment } from '../../environments/environment';
 import type {
   CreateEmployeeRequest,
   Employee,
+  PaginatedEmployees,
+  PaginationMeta,
   UpdateEmployeeRequest,
 } from '../models/employee.model';
 
-// Reflejan solo los campos que este servicio realmente lee del ApiResponse del
-// backend (api-response.ts); success/message/errors/timestamp también viajan
-// pero no se tipan aquí porque no se usan.
 interface EmployeeResponse {
   success: boolean;
   message: string;
@@ -20,43 +19,62 @@ interface EmployeeResponse {
 interface EmployeeListResponse {
   success: boolean;
   message: string;
-  data: Employee[];
+  data: PaginatedEmployees | Employee[];
 }
+
+const initialPagination: PaginationMeta = {
+  page: 1,
+  limit: 5,
+  total: 0,
+  totalPages: 0,
+};
 
 @Injectable({
   providedIn: 'root',
 })
 export class EmployeeService {
   private readonly apiUrl = `${environment.apiBaseUrl}/empleados`;
+  private legacyEmployeesCache: Employee[] | null = null;
 
-  // Los Subject son privados y solo mutables desde este servicio; los componentes
-  // (Smart/Dumb) reciben las versiones de solo lectura de abajo vía async pipe,
-  // nunca pueden llamar a .next() directamente. Esto centraliza el estado reactivo.
   private readonly employeesSubject = new BehaviorSubject<Employee[]>([]);
+  private readonly paginationSubject = new BehaviorSubject<PaginationMeta>(initialPagination);
   private readonly loadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
 
   readonly employees$: Observable<Employee[]> = this.employeesSubject.asObservable();
+  readonly pagination$: Observable<PaginationMeta> = this.paginationSubject.asObservable();
   readonly loading$: Observable<boolean> = this.loadingSubject.asObservable();
   readonly error$: Observable<string | null> = this.errorSubject.asObservable();
 
   constructor(private readonly http: HttpClient) {}
 
-  loadEmployees(): void {
+  loadEmployees(page = this.paginationSubject.value.page, limit = this.paginationSubject.value.limit): void {
+    if (this.legacyEmployeesCache) {
+      this.publishLocalPage(this.legacyEmployeesCache, page, limit);
+      return;
+    }
+
     this.loadingSubject.next(true);
     this.errorSubject.next(null);
 
     this.http
-      .get<EmployeeListResponse>(this.apiUrl)
-      // finalize corre tanto en success como en error: garantiza apagar el loading
-      // sin duplicar esa línea en los dos callbacks de abajo.
+      .get<EmployeeListResponse>(this.apiUrl, {
+        params: {
+          page,
+          limit,
+        },
+      })
       .pipe(finalize(() => this.loadingSubject.next(false)))
       .subscribe({
         next: (response) => {
-          // Se clona el arreglo (spread) en vez de reasignar response.data tal cual:
-          // mantiene la disciplina de inmutabilidad aunque acá no sea estrictamente
-          // necesario, para que todo mutation del estado siga el mismo patrón.
-          this.employeesSubject.next([...response.data]);
+          if (Array.isArray(response.data)) {
+            this.legacyEmployeesCache = response.data;
+            this.publishLocalPage(response.data, page, limit);
+            return;
+          }
+
+          this.legacyEmployeesCache = null;
+          this.publishPaginatedResponse(response.data, page, limit);
         },
         error: () => {
           this.errorSubject.next('No se pudo cargar la lista de empleados.');
@@ -64,16 +82,45 @@ export class EmployeeService {
       });
   }
 
+  private publishLocalPage(data: Employee[], page: number, limit: number): void {
+    const total = data.length;
+    const totalPages = Math.ceil(total / limit);
+    const currentPage = Math.min(page, totalPages || 1);
+    const start = (currentPage - 1) * limit;
+
+    this.employeesSubject.next(data.slice(start, start + limit));
+    this.paginationSubject.next({
+      total,
+      page: currentPage,
+      limit,
+      totalPages,
+    });
+  }
+
+  private publishPaginatedResponse(data: PaginatedEmployees, page: number, limit: number): void {
+    const normalizedPage = data.page ?? page;
+    const normalizedLimit = data.limit ?? limit;
+
+    this.employeesSubject.next([...data.items]);
+    this.paginationSubject.next({
+      page: normalizedPage,
+      limit: normalizedLimit,
+      total: data.total,
+      totalPages: data.totalPages,
+    });
+  }
+
+  private invalidateLegacyCache(): void {
+    this.legacyEmployeesCache = null;
+  }
+
   createEmployee(data: CreateEmployeeRequest): void {
     this.errorSubject.next(null);
 
     this.http.post<EmployeeResponse>(this.apiUrl, data).subscribe({
-      next: (response) => {
-        // Nunca se hace push() sobre el arreglo existente: se construye uno nuevo
-        // con spread para que BehaviorSubject emita una referencia distinta y
-        // Angular/RxJS detecten el cambio de forma predecible.
-        const currentEmployees = this.employeesSubject.value;
-        this.employeesSubject.next([...currentEmployees, response.data]);
+      next: () => {
+        this.invalidateLegacyCache();
+        this.loadEmployees(1, this.paginationSubject.value.limit);
       },
       error: () => {
         this.errorSubject.next('No se pudo guardar el empleado.');
@@ -85,16 +132,9 @@ export class EmployeeService {
     this.errorSubject.next(null);
 
     this.http.put<EmployeeResponse>(`${this.apiUrl}/${id}`, data).subscribe({
-      next: (response) => {
-        const currentEmployees = this.employeesSubject.value;
-        // .map() en vez de mutar el objeto encontrado: solo la fila editada se
-        // reemplaza por el registro que devuelve el backend (fuente de verdad),
-        // el resto del arreglo conserva sus referencias intactas.
-        const updatedEmployees = currentEmployees.map((employee) =>
-          employee.id === id ? response.data : employee,
-        );
-
-        this.employeesSubject.next([...updatedEmployees]);
+      next: () => {
+        this.invalidateLegacyCache();
+        this.loadEmployees(this.paginationSubject.value.page, this.paginationSubject.value.limit);
       },
       error: () => {
         this.errorSubject.next('No se pudo actualizar el empleado.');
@@ -107,11 +147,10 @@ export class EmployeeService {
 
     this.http.delete(`${this.apiUrl}/${id}`).subscribe({
       next: () => {
-        const currentEmployees = this.employeesSubject.value;
-        // .filter() descarta el eliminado sin tocar los demás elementos; el 200
-        // sin body del DELETE (ver controller) confirma que ya no existe en la DB.
-        const remainingEmployees = currentEmployees.filter((employee) => employee.id !== id);
-        this.employeesSubject.next([...remainingEmployees]);
+        const { page, limit, total } = this.paginationSubject.value;
+        const shouldGoBack = this.employeesSubject.value.length === 1 && page > 1 && total > 1;
+        this.invalidateLegacyCache();
+        this.loadEmployees(shouldGoBack ? page - 1 : page, limit);
       },
       error: () => {
         this.errorSubject.next('No se pudo eliminar el empleado.');

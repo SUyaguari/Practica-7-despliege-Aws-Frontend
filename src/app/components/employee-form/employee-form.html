@@ -1,24 +1,56 @@
-<form class="employee-form" [formGroup]="employeeForm" (ngSubmit)="submitForm()">
-  <h2>{{ isEditing ? 'Editar empleado' : 'Nuevo empleado' }}</h2>
+<form
+  class="employee-form"
+  [class.is-editing]="isEditing"
+  [formGroup]="employeeForm"
+  (ngSubmit)="submitForm()"
+>
+  <div class="form-header">
+    <div>
+      <p class="form-kicker">{{ isEditing ? 'Modo edicion' : 'Registro' }}</p>
+      <h2>{{ isEditing ? 'Actualizar empleado' : 'Nuevo empleado' }}</h2>
+    </div>
+
+    @if (isEditing) {
+      <span class="edit-badge">Activo</span>
+    }
+  </div>
+
+  @if (isEditing && employee) {
+    <p class="editing-summary">
+      Modificando <strong>{{ employee.nombre }}</strong>
+    </p>
+  }
 
   <label>
     Nombre
     <input type="text" formControlName="nombre" autocomplete="name" />
+    @if (employeeForm.controls.nombre.invalid && employeeForm.controls.nombre.touched) {
+      <span class="field-error">Ingresa al menos 3 caracteres.</span>
+    }
   </label>
 
   <label>
     Cargo
     <input type="text" formControlName="cargo" />
+    @if (employeeForm.controls.cargo.invalid && employeeForm.controls.cargo.touched) {
+      <span class="field-error">Ingresa al menos 3 caracteres.</span>
+    }
   </label>
 
   <label>
     Departamento
     <input type="text" formControlName="departamento" />
+    @if (employeeForm.controls.departamento.invalid && employeeForm.controls.departamento.touched) {
+      <span class="field-error">Ingresa al menos 2 caracteres.</span>
+    }
   </label>
 
   <label>
     Sueldo
     <input type="number" formControlName="sueldo" min="1" />
+    @if (employeeForm.controls.sueldo.invalid && employeeForm.controls.sueldo.touched) {
+      <span class="field-error">El sueldo debe ser mayor a 0.</span>
+    }
   </label>
 
   <div class="form-actions">

@@ -25,8 +25,12 @@
 
     <app-employee-table
       [employees]="employees$ | async"
+      [pagination]="pagination$ | async"
+      [selectedEmployeeId]="editingEmployee?.id ?? null"
       (editEmployee)="startEdit($event)"
       (deleteEmployee)="deleteEmployee($event)"
+      (pageChange)="changePage($event)"
+      (pageSizeChange)="changePageSize($event)"
     />
   </section>
 </main>

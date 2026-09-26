@@ -1,7 +1,7 @@
 <section class="employee-table" aria-label="Listado de empleados">
   <div class="table-header">
     <h2>Listado</h2>
-    <span>{{ employeeList.length }} registros</span>
+    <span>{{ totalRecords }} registros</span>
   </div>
 
   @if (employeeList.length > 0) {
@@ -17,19 +17,53 @@
       </thead>
       <tbody>
         @for (employee of employeeList; track employee.id) {
-          <tr>
-            <td>{{ employee.nombre }}</td>
+          <tr [class.is-selected]="isSelected(employee)">
+            <td>
+              <div class="employee-name">{{ employee.nombre }}</div>
+              @if (isSelected(employee)) {
+                <span class="row-status">Editando</span>
+              }
+            </td>
             <td>{{ employee.cargo }}</td>
             <td>{{ employee.departamento }}</td>
             <td>{{ employee.sueldo | currency: 'USD' : 'symbol' : '1.0-0' }}</td>
             <td class="actions">
-              <button type="button" class="edit-btn" (click)="requestEdit(employee)">Editar</button>
+              <button
+                type="button"
+                class="edit-btn"
+                [class.is-active]="isSelected(employee)"
+                (click)="requestEdit(employee)"
+              >
+                {{ isSelected(employee) ? 'Editando' : 'Editar' }}
+              </button>
               <button type="button" class="delete-btn" (click)="requestDelete(employee.id)">Eliminar</button>
             </td>
           </tr>
         }
       </tbody>
     </table>
+
+    <div class="pagination-bar" aria-label="Paginacion de empleados">
+      <p>
+        Mostrando <strong>{{ firstRecord }}-{{ lastRecord }}</strong> de
+        <strong>{{ totalRecords }}</strong>
+      </p>
+
+      <div class="page-size">
+        <label for="employee-page-size">Por pagina</label>
+        <select id="employee-page-size" [value]="currentLimit" (change)="requestPageSize($event)">
+          @for (option of pageSizeOptions; track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="page-controls">
+        <button type="button" [disabled]="!hasPreviousPage" (click)="requestPreviousPage()">Anterior</button>
+        <span>Pagina {{ currentPage }} de {{ totalPages || 1 }}</span>
+        <button type="button" [disabled]="!hasNextPage" (click)="requestNextPage()">Siguiente</button>
+      </div>
+    </div>
   } @else {
     <p class="empty-state">Aun no hay empleados registrados.</p>
   }

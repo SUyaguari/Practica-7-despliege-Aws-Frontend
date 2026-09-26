@@ -21,6 +21,7 @@ export class App implements OnInit {
   // Los observables se exponen tal cual (sin .subscribe() aquí); el template los
   // consume con `async` pipe, que además se desuscribe solo al destruir la vista.
   readonly employees$ = this.employeeService.employees$;
+  readonly pagination$ = this.employeeService.pagination$;
   readonly loading$ = this.employeeService.loading$;
   readonly error$ = this.employeeService.error$;
 
@@ -55,5 +56,15 @@ export class App implements OnInit {
 
   deleteEmployee(id: string): void {
     this.employeeService.deleteEmployee(id);
+  }
+
+  changePage(page: number): void {
+    this.editingEmployee = null;
+    this.employeeService.loadEmployees(page);
+  }
+
+  changePageSize(limit: number): void {
+    this.editingEmployee = null;
+    this.employeeService.loadEmployees(1, limit);
   }
 }

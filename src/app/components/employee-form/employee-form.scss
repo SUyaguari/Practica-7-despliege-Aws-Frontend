@@ -12,10 +12,58 @@
   padding: 20px;
 }
 
+.employee-form.is-editing {
+  border-color: #2563eb;
+  box-shadow:
+    0 0 0 3px rgb(37 99 235 / 0.16),
+    0 16px 34px rgb(15 23 42 / 0.12);
+}
+
+.employee-form.is-editing button[type="submit"] {
+  background: #15803d;
+}
+
+.form-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.form-kicker {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
 h2 {
   font-size: 1rem;
   font-weight: 750;
   margin: 0;
+}
+
+.edit-badge {
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 850;
+  padding: 5px 8px;
+}
+
+.editing-summary {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  color: #1e3a8a;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  margin: 0;
+  padding: 10px 12px;
 }
 
 label {
@@ -39,6 +87,12 @@ input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgb(37 99 235 / 0.16);
   outline: none;
+}
+
+.field-error {
+  color: #b42318;
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .form-actions {
@@ -67,4 +121,10 @@ button:disabled {
 .btn-secondary {
   background: #f1f5f9;
   color: #334155;
+}
+
+@media (max-width: 420px) {
+  .form-actions {
+    flex-direction: column;
+  }
 }
